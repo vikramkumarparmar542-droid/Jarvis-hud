@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JARVIS AI</title>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;background:#020711;color:#70e5ff;
+  font-family:Arial,sans-serif;min-height:100vh;
+  display:flex;align-items:center;justify-content:center;
+  overflow-x:hidden
+}
+.app{text-align:center;width:100%;max-width:480px;padding:22px}
+h1{letter-spacing:9px;text-shadow:0 0 18px #00bfff}
+.status{font-size:12px;letter-spacing:3px;color:#42bfff}
+.hud{
+ width:230px;height:230px;margin:28px auto;
+ border:2px solid #168dff;border-radius:50%;
+ display:flex;align-items:center;justify-content:center;
+ box-shadow:0 0 25px #007bff,inset 0 0 30px #0055aa;
+ position:relative;animation:pulse 2s infinite
+}
+.ring{
+ position:absolute;inset:13px;border:2px dashed #48dfff;
+ border-radius:50%;animation:spin 12s linear infinite
+}
+.ring2{
+ position:absolute;inset:32px;border:2px solid #1465c9;
+ border-radius:50%;animation:spin 8s linear infinite reverse
+}
+.core{font-size:45px;text-shadow:0 0 25px #00c8ff}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{
+ 50%{box-shadow:0 0 45px #007bff,inset 0 0 35px #0055aa}
+}
+#status{min-height:22px;font-size:13px;margin:14px}
+input,select{
+ width:100%;padding:14px;margin:7px 0;
+ background:#081629;border:1px solid #147ad3;
+ border-radius:8px;color:#d8f7ff;font-size:15px
+}
+button{
+ padding:13px 17px;margin:5px;border:1px solid #28bfff;
+ border-radius:8px;background:#062449;color:#8cecff;
+ font-weight:bold;cursor:pointer
+}
+button:active{background:#07569a}
+#reply{
+ min-height:65px;padding:15px;margin-top:16px;
+ border:1px solid #12518a;border-radius:10px;
+ background:#06101e;line-height:1.6;overflow-wrap:anywhere
+}
+.small{font-size:11px;color:#639bbd;margin-top:18px}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>J.A.R.V.I.S</h1>
+  <div class="status">PERSONAL AI INTERFACE</div>
+
+  <div class="hud">
+    <div class="ring"></div>
+    <div class="ring2"></div>
+    <div class="core">J</div>
+  </div>
+
+  <div class="status">SYSTEM ONLINE</div>
+  <div id="status">Ready, Boss.</div>
+
+  <select id="lang">
+    <option value="hi-IN">Hindi Voice</option>
+    <option value="en-US">English Voice</option>
+  </select>
+
+  <input id="cmd" placeholder="Type a command, Boss...">
+
+  <button onclick="send()">SEND</button>
+  <button onclick="listen()">🎙 SPEAK</button>
+  <button onclick="stopVoice()">■ STOP VOICE</button>
+
+  <div id="reply">JARVIS is waiting for your command.</div>
+  <div class="small">
+    CUSTOM HUD • ANDROID • VERSION 1.0
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+function say(text){
+  if(!('speechSynthesis' in window)){
+    $('status').textContent='Voice output not supported';
+    return;
+  }
+  speechSynthesis.cancel();
+  const msg = new SpeechSynthesisUtterance(text);
+  msg.lang = $('lang').value;
+  msg.rate = 0.95;
+  speechSynthesis.speak(msg);
+}
+
+function respond(text){
+  $('reply').textContent=text;
+  $('status').textContent='Command processed';
+  say(text);
+}
+
+function send(){
+  const text=$('cmd').value.trim();
+  if(!text)return;
+  $('cmd').value='';
+  const c=text.toLowerCase();
+
+  if(c.includes('hello')||c.includes('namaste')||c.includes('नमस्ते')){
+    respond('Hello Boss! JARVIS interface is ready.');
+  }else if(c.includes('time')||c.includes('समय')){
+    respond('The time is '+new Date().toLocaleTimeString());
+  }else if(c.includes('date')||c.includes('तारीख')){
+    respond('Today is '+new Date().toLocaleDateString());
+  }else if(c.includes('youtube')){
+    respond('Opening YouTube.');
+    window.open('https://m.youtube.com/','_blank');
+  }else if(c.includes('help')||c.includes('मदद')){
+    respond('Boss, try asking for the time, date, or opening YouTube.');
+  }else{
+    respond('Boss, I received your command: '+text+'. A local AI model must be connected to answer general questions.');
+  }
+}
+
+function listen(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){
+    $('status').textContent='Speech recognition unavailable in this browser';
+    $('reply').textContent='Please type your command. Voice recognition needs a compatible speech engine.';
+    return;
+  }
+  const rec=new SR();
+  rec.lang=$('lang').value;
+  rec.interimResults=false;
+  rec.onstart=()=> $('status').textContent='Listening, Boss...';
+  rec.onresult=e=>{
+    $('cmd').value=e.results[0][0].transcript;
+    send();
+  };
+  rec.onerror=()=> $('status').textContent='Voice input failed. Try typing.';
+  rec.onend=()=> {
+    if($('status').textContent==='Listening, Boss...')
+      $('status').textContent='Ready, Boss.';
+  };
+  rec.start();
+}
+
+function stopVoice(){
+  if('speechSynthesis' in window)speechSynthesis.cancel();
+  $('status').textContent='Voice stopped';
+}
+$('cmd').addEventListener('keydown',e=>{
+  if(e.key==='Enter')send();
+});
+</script>
+</body>
+</html>
