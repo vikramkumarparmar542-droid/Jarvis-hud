@@ -156,7 +156,7 @@ async function send() {
     if (!answer) throw new Error("Empty AI response");
 
     respond(answer);
-  } catch (error) {
+  } catch (error) {"Error: " + error.message;
     $("status").textContent = "Connection failed";
     $("reply").textContent =
       "Boss, local AI se connection nahi ho paya. " +
