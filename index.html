@@ -86,79 +86,125 @@ button:active{background:#07569a}
   </div>
 </div>
 
+
 <script>
 const $ = id => document.getElementById(id);
 
-function say(text){
-  if(!('speechSynthesis' in window)){
-    $('status').textContent='Voice output not supported';
+function say(text) {
+  if (!("speechSynthesis" in window)) {
+    $("status").textContent = "Voice output unavailable";
     return;
   }
+
   speechSynthesis.cancel();
+
   const msg = new SpeechSynthesisUtterance(text);
-  msg.lang = $('lang').value;
+  msg.lang = $("lang").value;
   msg.rate = 0.95;
   speechSynthesis.speak(msg);
 }
 
-function respond(text){
-  $('reply').textContent=text;
-  $('status').textContent='Command processed';
+function respond(text) {
+  $("reply").textContent = text;
+  $("status").textContent = "JARVIS online";
   say(text);
 }
 
-function send(){
-  const text=$('cmd').value.trim();
-  if(!text)return;
-  $('cmd').value='';
-  const c=text.toLowerCase();
+async function send() {
+  const text = $("cmd").value.trim();
+  if (!text) return;
 
-  if(c.includes('hello')||c.includes('namaste')||c.includes('नमस्ते')){
-    respond('Hello Boss! JARVIS interface is ready.');
-  }else if(c.includes('time')||c.includes('समय')){
-    respond('The time is '+new Date().toLocaleTimeString());
-  }else if(c.includes('date')||c.includes('तारीख')){
-    respond('Today is '+new Date().toLocaleDateString());
-  }else if(c.includes('youtube')){
-    respond('Opening YouTube.');
-    window.open('https://m.youtube.com/','_blank');
-  }else if(c.includes('help')||c.includes('मदद')){
-    respond('Boss, try asking for the time, date, or opening YouTube.');
-  }else{
-    respond('Boss, I received your command: '+text+'. A local AI model must be connected to answer general questions.');
+  $("cmd").value = "";
+  $("status").textContent = "Thinking, Boss...";
+  $("reply").textContent = "JARVIS is processing your request...";
+
+  try {
+    const response = await fetch(
+      "http://127.0.0.1:8080/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          messages: [
+            {
+              role: "system",
+              content: "You are JARVIS, a helpful personal AI assistant. Reply naturally in Hindi when the user speaks Hindi, otherwise use English. Be concise. Never claim you performed a phone action unless it actually happened."
+            },
+            {
+              role: "user",
+              content: text
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 300,
+          stream: false
+        })
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("AI server returned HTTP " + response.status);
+    }
+
+    const data = await response.json();
+    const answer = data.choices?.[0]?.message?.content?.trim();
+
+    if (!answer) throw new Error("Empty AI response");
+
+    respond(answer);
+  } catch (error) {
+    $("status").textContent = "Connection failed";
+    $("reply").textContent =
+      "Boss, local AI se connection nahi ho paya. " +
+      "Check karo ki Termux server abhi bhi chal raha hai. " +
+      "Error: " + error.message;
   }
 }
 
-function listen(){
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){
-    $('status').textContent='Speech recognition unavailable in this browser';
-    $('reply').textContent='Please type your command. Voice recognition needs a compatible speech engine.';
+function listen() {
+  const SR = window.SpeechRecognition ||
+             window.webkitSpeechRecognition;
+
+  if (!SR) {
+    $("status").textContent = "Speech recognition unavailable";
+    $("reply").textContent =
+      "Boss, is browser mein speech recognition available nahi hai. Filhaal type karke command bhejo.";
     return;
   }
-  const rec=new SR();
-  rec.lang=$('lang').value;
-  rec.interimResults=false;
-  rec.onstart=()=> $('status').textContent='Listening, Boss...';
-  rec.onresult=e=>{
-    $('cmd').value=e.results[0][0].transcript;
+
+  const rec = new SR();
+  rec.lang = $("lang").value;
+  rec.interimResults = false;
+
+  rec.onstart = () => {
+    $("status").textContent = "Listening, Boss...";
+  };
+
+  rec.onresult = event => {
+    $("cmd").value = event.results[0][0].transcript;
     send();
   };
-  rec.onerror=()=> $('status').textContent='Voice input failed. Try typing.';
-  rec.onend=()=> {
-    if($('status').textContent==='Listening, Boss...')
-      $('status').textContent='Ready, Boss.';
+
+  rec.onerror = () => {
+    $("status").textContent = "Voice input failed";
   };
+
   rec.start();
 }
 
-function stopVoice(){
-  if('speechSynthesis' in window)speechSynthesis.cancel();
-  $('status').textContent='Voice stopped';
+function stopVoice() {
+  if ("speechSynthesis" in window) {
+    speechSynthesis.cancel();
+  }
+  $("status").textContent = "Voice stopped";
 }
-$('cmd').addEventListener('keydown',e=>{
-  if(e.key==='Enter')send();
+
+$("cmd").addEventListener("keydown", event => {
+  if (event.key === "Enter") send();
 });
 </script>
+  
 </body>
 </html>
